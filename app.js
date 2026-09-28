@@ -14,8 +14,23 @@
     del(k) { try { localStorage.removeItem(k); } catch { /* ignore */ } },
   };
 
+  // The sign-in token lives in localStorage when "Remember me" is ticked, otherwise only for
+  // this tab in sessionStorage.
+  const tokenStore = {
+    get() {
+      try { return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY); } catch { return null; }
+    },
+    set(v, remember) {
+      this.del();
+      try { (remember ? localStorage : sessionStorage).setItem(TOKEN_KEY, v); } catch { /* ignore */ }
+    },
+    del() {
+      try { localStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+    },
+  };
+
   const state = {
-    token: store.get(TOKEN_KEY),
+    token: tokenStore.get(),
     user: null,
     current: null,   // {query, results, cached, cachedAt} of the latest search
     savedCount: 0,
@@ -55,11 +70,13 @@
     const box = el("div", { class: `message ${kind}` },
       el("span", { text }),
       el("button", { "aria-label": "Dismiss", text: "×", onclick: (e) => e.target.closest(".message").remove() }));
-    $("messages").append(box);
+    messageHost().append(box);
     box.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
-  const clearMessages = () => $("messages").replaceChildren();
+  // While signed out the workspace is hidden, so messages go on the sign-in card instead.
+  const messageHost = () => $("view-login").hidden ? $("messages") : $("login-messages");
+  const clearMessages = () => { $("messages").replaceChildren(); $("login-messages").replaceChildren(); };
 
   function busy(on, text = "Working…") {
     $("busy-text").textContent = text;
@@ -151,13 +168,15 @@
 
   function showView(name) {
     $("view-login").hidden = name !== "login";
+    $("shell").hidden = name !== "app";
     $("view-app").hidden = name !== "app";
+    helix(name === "login");
     $("account-card").hidden = name !== "app";
     lockNav(name !== "app");
   }
 
   function signOut(message) {
-    store.del(TOKEN_KEY);
+    tokenStore.del();
     state.token = null;
     state.user = null;
     state.current = null;
@@ -492,6 +511,98 @@
     syncThemeButton();
   });
 
+  /* ---------- sign-in backdrop: a turning DNA helix ----------------------- */
+
+  // Two canvases: a sharp helix running corner to corner, and a larger one in front that CSS
+  // blurs, standing in for an out-of-focus strand close to the camera.
+  const helix = (() => {
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const back = $("helix-back"), front = $("helix-front");
+    let raf = 0, running = false, w = 0, h = 0, dpr = 1;
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = window.innerWidth; h = window.innerHeight;
+      for (const c of [back, front]) {
+        c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+        c.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+    }
+
+    // One helix along the line (x0,y0) -> (x1,y1). `phase` turns it about its axis.
+    function draw(ctx, x0, y0, x1, y1, radius, turns, phase, scale) {
+      const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy);
+      const ux = dx / len, uy = dy / len, nx = -uy, ny = ux;
+      const steps = 220, rungs = Math.round(turns * 10);
+      const at = (t, off) => {
+        const a = t * turns * Math.PI * 2 + phase + off;
+        const r = Math.sin(a) * radius;
+        return { x: x0 + dx * t + nx * r, y: y0 + dy * t + ny * r, z: Math.cos(a) };
+      };
+
+      // Base-pair rungs, faint when on the far side.
+      for (let i = 0; i <= rungs; i++) {
+        const t = i / rungs, a = at(t, 0), b = at(t, Math.PI);
+        const depth = (a.z + 1) / 2;
+        ctx.strokeStyle = `rgba(90, 130, 190, ${0.25 + depth * 0.35})`;
+        ctx.lineWidth = 3 * scale;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        for (const p of [a, b, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: 0 }]) {
+          ctx.shadowColor = "rgba(255, 176, 64, .9)";
+          ctx.shadowBlur = 12 * scale;
+          ctx.fillStyle = `rgba(255, ${190 + depth * 40 | 0}, 90, ${0.45 + depth * 0.5})`;
+          ctx.beginPath(); ctx.arc(p.x, p.y, 2.6 * scale, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+      }
+
+      // The two backbones: a dark tube with a cool rim light, brighter on the near side.
+      for (const off of [0, Math.PI]) {
+        for (let i = 0; i < steps; i++) {
+          const p = at(i / steps, off), q = at((i + 1) / steps, off);
+          const depth = (p.z + 1) / 2;
+          ctx.lineCap = "round";
+          ctx.strokeStyle = `rgba(${18 + depth * 20 | 0}, ${30 + depth * 30 | 0}, ${58 + depth * 40 | 0}, 1)`;
+          ctx.lineWidth = (7 + depth * 5) * scale;
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+          ctx.strokeStyle = `rgba(120, 180, 255, ${0.12 + depth * 0.5})`;
+          ctx.lineWidth = 1.4 * scale;
+          ctx.beginPath();
+          ctx.moveTo(p.x - nx * 2 * scale, p.y - ny * 2 * scale);
+          ctx.lineTo(q.x - nx * 2 * scale, q.y - ny * 2 * scale);
+          ctx.stroke();
+        }
+      }
+    }
+
+    function frame(time) {
+      const phase = time / 5200;
+      const b = back.getContext("2d"), f = front.getContext("2d");
+      b.clearRect(0, 0, w, h); f.clearRect(0, 0, w, h);
+      const s = Math.max(0.7, Math.min(w, h) / 820);
+      draw(b, -w * 0.05, -h * 0.02, w * 1.05, h * 1.02, 120 * s, 3.2, phase, s);
+      draw(f, w * 0.12, -h * 0.1, -w * 0.02, h * 1.1, 70 * s, 1.6, -phase * 1.3 + 1, s * 2.2);
+      if (running) raf = requestAnimationFrame(frame);
+    }
+
+    function start() {
+      if (running) return;
+      resize();
+      if (reduceMotion.matches) return frame(0);   // a still frame
+      running = true;
+      raf = requestAnimationFrame(frame);
+    }
+    function stop() { running = false; cancelAnimationFrame(raf); }
+
+    window.addEventListener("resize", () => { if (!$("view-login").hidden) { resize(); if (!running) frame(0); } });
+    document.addEventListener("visibilitychange", () => {
+      if ($("view-login").hidden) return;
+      if (document.hidden) stop(); else start();
+    });
+
+    return (on) => (on ? start() : stop());
+  })();
+
   /* ---------- wiring ------------------------------------------------------- */
 
   $("login-form").addEventListener("submit", async (e) => {
@@ -506,12 +617,13 @@
     try {
       const token = await api("/auth/login", { method: "POST", body: { email, password }, auth: false });
       state.token = token.access_token;
-      store.set(TOKEN_KEY, state.token);
+      tokenStore.set(state.token, $("login-remember").checked);
       const user = await api("/auth/me");
       $("login-password").value = "";
+      setPasswordVisible(false);
       enterApp(user);
     } catch (err) {
-      if (!state.user) { state.token = null; store.del(TOKEN_KEY); }
+      if (!state.user) { state.token = null; tokenStore.del(); }
       showMessage(friendly(err));
     } finally {
       busy(false);
@@ -527,13 +639,28 @@
     $(nav).addEventListener("click", () => markNav(panel));
   }
 
-  $("help-btn").addEventListener("click", () => {
+  function setPasswordVisible(on) {
+    $("login-password").type = on ? "text" : "password";
+    $("pw-toggle").setAttribute("aria-pressed", String(on));
+    $("pw-toggle").setAttribute("aria-label", on ? "Hide password" : "Show password");
+  }
+  $("pw-toggle").addEventListener("click", () =>
+    setPasswordVisible($("login-password").type === "password"));
+
+  $("login-forgot").addEventListener("click", () => {
+    clearMessages();
+    showMessage("Passwords are reset by the lab admin. Ask them to set a new one for your account.", "warn");
+  });
+
+  const showAbout = () => {
     clearMessages();
     showMessage("Describe an assay, organism and tissue, and Seq2Find queries NCBI GEO live, then " +
       "uses a language model to rank the candidates against your conditions and data-availability " +
       "requirement. Results link straight to the GEO series and its files — nothing is re-hosted. " +
       "Accounts are created by the lab admin.", "warn");
-  });
+  };
+  $("help-btn").addEventListener("click", showAbout);
+  $("login-about").addEventListener("click", showAbout);
 
   async function boot() {
     syncThemeButton();

@@ -19,7 +19,53 @@
 </head>
 <body>
 
-<div class="shell">
+<!-- Sign in: a full-screen page shown instead of the shell ========================= -->
+<section class="login" id="view-login" hidden>
+  <canvas class="helix helix-back" id="helix-back" aria-hidden="true"></canvas>
+  <canvas class="helix helix-front" id="helix-front" aria-hidden="true"></canvas>
+
+  <header class="login-top">
+    <span class="login-brand"><span class="logo" aria-hidden="true"><span></span></span>Seq2Find</span>
+    <button type="button" class="login-about" id="login-about">about</button>
+  </header>
+
+  <div class="login-card">
+    <div class="logo login-mark" aria-hidden="true"><span></span></div>
+    <h1 class="login-title">Welcome <span>back!</span></h1>
+    <p class="login-sub">Sign in to search GEO for datasets that match your study,
+      and pick up where you left off with your saved searches.</p>
+
+    <div id="login-messages" aria-live="polite"></div>
+
+    <form id="login-form" novalidate>
+      <label class="login-field">
+        <span>Email</span>
+        <input type="email" id="login-email" autocomplete="username" placeholder="Enter your email" required>
+      </label>
+      <label class="login-field">
+        <span>Password</span>
+        <span class="login-pw">
+          <input type="password" id="login-password" autocomplete="current-password" placeholder="Enter your password" required>
+          <button type="button" class="pw-toggle" id="pw-toggle" aria-label="Show password" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </span>
+      </label>
+      <div class="login-row">
+        <label class="login-check"><input type="checkbox" id="login-remember" checked> Remember me</label>
+        <button type="button" class="login-link" id="login-forgot">Forgot password?</button>
+      </div>
+      <button type="submit" class="login-submit" id="login-submit">Log In</button>
+    </form>
+
+    <hr class="login-rule">
+    <p class="login-foot">Don&rsquo;t have an account? Access is by invitation &mdash;
+      ask the lab admin to create one.</p>
+    <p class="login-hint">The server sleeps when idle, so the first sign-in can take a minute.</p>
+  </div>
+</section>
+
+<div class="shell" id="shell">
 
   <!-- Icon rail =============================================================== -->
   <aside class="rail-nav">
@@ -60,28 +106,6 @@
     </header>
 
     <div id="messages" aria-live="polite"></div>
-
-    <!-- Sign in --------------------------------------------------------------- -->
-    <section class="panel panel-narrow" id="view-login" hidden>
-      <div class="panel-head">
-        <h2><span class="step" aria-hidden="true">&#9679;</span>Sign in</h2>
-        <p class="panel-meta">Access is by invitation. Ask the lab admin to create your account.</p>
-      </div>
-      <form id="login-form" novalidate>
-        <div class="field">
-          <span>Email</span>
-          <input type="email" id="login-email" autocomplete="username" required>
-        </div>
-        <div class="field field-wide">
-          <span>Password</span>
-          <input type="password" id="login-password" autocomplete="current-password" required>
-        </div>
-        <div class="panel-foot">
-          <button type="submit" class="btn btn-primary" id="login-submit">Sign in</button>
-          <span class="foot-hint">The server sleeps when idle, so the first sign-in can take a minute.</span>
-        </div>
-      </form>
-    </section>
 
     <!-- Signed in -------------------------------------------------------------- -->
     <div id="view-app" hidden>

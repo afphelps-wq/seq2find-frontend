@@ -506,6 +506,132 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 }
 .message button:hover { opacity: 1; }
 
+/* Sign-in page ---------------------------------------------------------------
+   Always dark, whatever the theme: a glass card floating over a slowly turning DNA helix
+   (drawn by app.js on the two canvases). The blurred front canvas gives the depth-of-field. */
+
+.login {
+  --l-ink:    #eef2fb;
+  --l-ink-2:  rgba(222, 230, 246, .72);
+  --l-ink-3:  rgba(222, 230, 246, .5);
+  --l-line:   rgba(255, 255, 255, .2);
+  --l-accent: #8fd6e8;
+  position: fixed; inset: 0; z-index: 10;
+  overflow-y: auto;
+  display: grid; place-items: center;
+  padding: 96px 16px 40px;
+  color: var(--l-ink);
+  color-scheme: dark;
+  background:
+    radial-gradient(900px 600px at 18% 8%, rgba(64, 120, 230, .28), transparent 65%),
+    radial-gradient(1000px 700px at 78% 70%, rgba(26, 60, 130, .45), transparent 65%),
+    linear-gradient(160deg, #0b1831 0%, #071126 55%, #040913 100%);
+  background-color: #071126;
+}
+
+.helix { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.helix-front { filter: blur(9px); opacity: .75; }
+
+.login-top {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 32px;
+}
+.login-brand { display: inline-flex; align-items: center; gap: 12px; font-weight: 600; font-size: 1.05rem; letter-spacing: -0.01em; }
+.login-brand .logo { width: 34px; height: 34px; border-radius: 10px; }
+.login-brand .logo span { inset: 7px 7px 10px 10px; border-radius: 5px; }
+.login-about {
+  background: none; border: 0; padding: 4px 2px; cursor: pointer;
+  font: inherit; font-size: .95rem; font-weight: 500; color: var(--l-accent);
+}
+.login-about:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+.login-card {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 480px;
+  padding: 40px 40px 34px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(40, 54, 92, .5), rgba(14, 22, 44, .62));
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 28px;
+  box-shadow: 0 40px 90px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .08);
+  -webkit-backdrop-filter: blur(24px) saturate(140%);
+  backdrop-filter: blur(24px) saturate(140%);
+}
+.login-mark { margin: 0 auto 20px; }
+
+.login-title { font-size: 2.6rem; font-weight: 500; letter-spacing: -0.035em; line-height: 1.1; }
+.login-title span {
+  background: linear-gradient(90deg, #8fd6e8, #c7c3f4 55%, #f3b7c5);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.login-sub { color: var(--l-ink-2); font-size: .92rem; margin: 14px auto 26px; max-width: 36ch; }
+
+#login-messages:empty { display: none; }
+#login-messages { text-align: left; margin-bottom: 14px; }
+#login-messages .message.error { background: rgba(230, 103, 103, .14); color: #f5b0af; border-left-color: #e66767; border-color: rgba(255, 255, 255, .1); }
+#login-messages .message.warn  { background: rgba(242, 207, 122, .1); color: #f2cf7a; border-left-color: #e0b14f; border-color: rgba(255, 255, 255, .1); }
+
+#login-form { display: grid; gap: 18px; text-align: left; }
+.login-field { display: grid; gap: 8px; font-size: .8rem; color: var(--l-ink-2); }
+.login-field input {
+  width: 100%; height: 52px;
+  padding: 0 18px;
+  border: 1px solid var(--l-line); border-radius: 14px;
+  background: rgba(255, 255, 255, .05);
+  font: inherit; font-size: .95rem; color: var(--l-ink);
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.login-field input::placeholder { color: var(--l-ink-3); }
+.login-field input:focus {
+  outline: none;
+  border-color: rgba(143, 214, 232, .8);
+  background: rgba(143, 214, 232, .06);
+  box-shadow: 0 0 0 4px rgba(143, 214, 232, .14);
+}
+.login-pw { position: relative; display: block; }
+.login-pw input { padding-right: 52px; }
+.pw-toggle {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 36px; height: 36px; display: grid; place-items: center;
+  background: none; border: 0; border-radius: 10px; cursor: pointer;
+  color: var(--l-ink-3);
+}
+.pw-toggle:hover, .pw-toggle[aria-pressed="true"] { color: var(--l-ink); }
+.pw-toggle svg { width: 20px; height: 20px; }
+
+.login-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.login-check { display: inline-flex; align-items: center; gap: 10px; font-size: .88rem; color: var(--l-ink-2); cursor: pointer; }
+.login-check input { width: 18px; height: 18px; margin: 0; accent-color: #7fb8e0; }
+.login-link {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font: inherit; font-size: .88rem; color: var(--l-ink);
+}
+.login-link:hover { color: var(--l-accent); }
+
+.login-submit {
+  height: 52px; margin-top: 6px;
+  border: 0; border-radius: 999px;
+  background: #f3f4f7; color: #12151c;
+  font: inherit; font-size: 1rem; font-weight: 600;
+  cursor: pointer;
+  transition: background .15s ease, transform .15s ease, box-shadow .15s ease;
+}
+.login-submit:hover { background: #ffffff; box-shadow: 0 10px 30px rgba(143, 214, 232, .25); }
+.login-submit:active { transform: translateY(1px); }
+.login-submit:disabled { background: rgba(243, 244, 247, .45); cursor: not-allowed; box-shadow: none; }
+
+.login-rule { border: 0; border-top: 1px solid var(--l-line); margin: 28px 0 22px; }
+.login-foot { margin: 0; font-size: .86rem; color: var(--l-ink-2); }
+.login-hint { margin: 10px 0 0; font-size: .76rem; color: var(--l-ink-3); }
+
+@media (max-width: 520px) {
+  .login { padding-top: 84px; }
+  .login-top { padding: 18px 16px; }
+  .login-card { padding: 30px 22px 26px; border-radius: 22px; }
+  .login-title { font-size: 2.1rem; }
+}
+
 /* Busy overlay -------------------------------------------------------------- */
 
 #busy {
@@ -564,7 +690,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   .btn { width: 100%; text-align: center; }
   .btn-small { width: auto; }
   .panel-foot { gap: 9px; }
-  .logo { display: none; }
+  .rail-nav .logo { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
