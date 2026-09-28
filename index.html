@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seq2Find</title>
+<meta name="description" content="Describe a study and get AI-ranked GEO accessions with download links.">
+<!-- Inline icon, so the browser never asks the server for a /favicon.ico it doesn't have -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23d8e4b0'/%3E%3Cstop offset='.5' stop-color='%23bfe3dc'/%3E%3Cstop offset='1' stop-color='%23f3c3cc'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Ccircle cx='14' cy='14' r='6' fill='none' stroke='%23fff4c9' stroke-width='2.6'/%3E%3Cpath d='M18.5 18.5 24 24' stroke='%23f7d59a' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+<script>
+  /* Apply a saved theme before the page paints, so it never flashes the wrong colours.
+     With nothing saved, the stylesheet follows the operating system's setting. */
+  try {
+    const saved = localStorage.getItem("theme");
+    if (saved === "light" || saved === "dark") document.documentElement.dataset.theme = saved;
+  } catch (e) { /* storage unavailable: the OS setting applies */ }
+</script>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Icon rail =============================================================== -->
+  <aside class="rail-nav">
+    <div class="logo" aria-hidden="true"><span></span></div>
+
+    <nav class="nav" aria-label="Sections">
+      <a class="nav-item is-active" id="nav-search" data-target="panel-search" href="#panel-search" aria-label="Search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
+        <span class="nav-label">Search</span>
+      </a>
+      <a class="nav-item is-locked" id="nav-results" data-target="panel-results" href="#panel-results" aria-label="Matches">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="18" cy="7" r="2"/></svg>
+        <span class="nav-label">Matches</span>
+      </a>
+      <a class="nav-item is-locked" id="nav-saved" data-target="panel-saved" href="#panel-saved" aria-label="Saved searches">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10a1 1 0 0 1 1 1v17l-6-4-6 4V4a1 1 0 0 1 1-1z"/></svg>
+        <span class="nav-label">Saved searches</span>
+      </a>
+    </nav>
+
+    <div class="rail-foot">
+      <button class="icon-btn" id="theme-btn" type="button" aria-label="Toggle dark mode" aria-pressed="false"></button>
+      <button class="icon-btn" id="help-btn" type="button" aria-label="About this app" title="About this app">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 16.5v-5M12 8h.01"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Workspace =============================================================== -->
+  <main class="workspace">
+    <header class="topbar">
+      <div class="topbar-title">
+        <span class="eyebrow">AI-ranked GEO dataset search</span>
+        <h1>Seq2Find</h1>
+      </div>
+      <p class="lede">Describe the study you need &mdash; assay, organism, tissue, treatment
+        conditions &mdash; and get a short ranked list of GEO series with direct download links.</p>
+    </header>
+
+    <div id="messages" aria-live="polite"></div>
+
+    <!-- Sign in --------------------------------------------------------------- -->
+    <section class="panel panel-narrow" id="view-login" hidden>
+      <div class="panel-head">
+        <h2><span class="step" aria-hidden="true">&#9679;</span>Sign in</h2>
+        <p class="panel-meta">Access is by invitation. Ask the lab admin to create your account.</p>
+      </div>
+      <form id="login-form" novalidate>
+        <div class="field">
+          <span>Email</span>
+          <input type="email" id="login-email" autocomplete="username" required>
+        </div>
+        <div class="field field-wide">
+          <span>Password</span>
+          <input type="password" id="login-password" autocomplete="current-password" required>
+        </div>
+        <div class="panel-foot">
+          <button type="submit" class="btn btn-primary" id="login-submit">Sign in</button>
+          <span class="foot-hint">The server sleeps when idle, so the first sign-in can take a minute.</span>
+        </div>
+      </form>
+    </section>
+
+    <!-- Signed in -------------------------------------------------------------- -->
+    <div id="view-app" hidden>
+
+      <!-- Headline numbers for the current search -->
+      <section class="stats" aria-label="Search summary">
+        <div class="stat stat-sage">
+          <span class="stat-label">Matches<br>returned</span>
+          <b class="stat-value" id="stat-results">&mdash;</b>
+          <span class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h7"/><circle cx="18" cy="7" r="2"/></svg>
+          </span>
+        </div>
+        <div class="stat stat-aqua" id="card-requirement">
+          <span class="stat-label">Meeting your<br>data requirement</span>
+          <b class="stat-value is-hidden" id="stat-requirement">&mdash;</b>
+          <p class="stat-empty" id="requirement-empty">Add a data-availability requirement to have matches checked against it.</p>
+          <span class="stat-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+          </span>
+        </div>
+        <div class="stat stat-rose">
+          <span class="stat-label">Saved<br>searches</span>
+          <b class="stat-value" id="stat-saved">&mdash;</b>
+          <p class="stat-note" id="saved-note">Bookmarks keep their results.</p>
+        </div>
+      </section>
+
+      <!-- Step 1: the query -->
+      <section class="panel" id="panel-search">
+        <div class="panel-head">
+          <h2><span class="step" aria-hidden="true">1</span>Describe the study</h2>
+          <p class="panel-meta">The first three fields build the GEO query. Conditions and data
+            availability are judged by the AI, so free text is fine.</p>
+        </div>
+        <form id="search-form" novalidate>
+          <div class="grid">
+            <label class="field">
+              <span>Methodology / assay<small>required</small></span>
+              <input id="f-methodology" maxlength="200" placeholder="Spatial single-cell RNA-seq" required>
+            </label>
+            <label class="field">
+              <span>Organism<small>required</small></span>
+              <input id="f-organism" maxlength="100" placeholder="Human" required>
+            </label>
+            <label class="field">
+              <span>Tissue / cell type<small>required</small></span>
+              <input id="f-tissue" maxlength="200" placeholder="Pancreatic tissue" required>
+            </label>
+            <label class="field">
+              <span>Shortlist size<small>how many to show</small></span>
+              <select id="f-max">
+                <option value="10" selected>Top 10</option>
+                <option value="15">Top 15</option>
+                <option value="20">Top 20</option>
+              </select>
+            </label>
+          </div>
+          <label class="field field-wide">
+            <span>Treatment conditions<small>optional &mdash; one per line</small></span>
+            <textarea id="f-conditions" rows="3" placeholder="PDAC primary resection, treatment-naive&#10;Healthy patient pancreas (control)"></textarea>
+          </label>
+          <label class="field field-wide">
+            <span>Data availability<small>optional &mdash; checked against each study's text</small></span>
+            <input id="f-availability" maxlength="500" placeholder="Metadata must indicate TLS annotations present">
+          </label>
+          <div class="panel-foot">
+            <button type="submit" class="btn btn-primary" id="search-submit">Search GEO</button>
+            <label class="check is-hidden" id="refresh-wrap">
+              <input type="checkbox" id="f-refresh"> Skip the cache (admin)
+            </label>
+            <span class="foot-hint">A new search takes 20&ndash;30 seconds. Repeats are served from the cache.</span>
+          </div>
+        </form>
+      </section>
+
+      <!-- Step 2: results -->
+      <section class="panel is-hidden" id="panel-results">
+        <div class="panel-head">
+          <div class="panel-head-row">
+            <h2><span class="step" aria-hidden="true">2</span>Ranked matches</h2>
+            <div class="result-actions" id="result-actions"></div>
+          </div>
+          <p class="panel-meta" id="result-origin"></p>
+        </div>
+        <div id="save-host"></div>
+        <div id="search-results"></div>
+      </section>
+
+      <!-- Saved searches -->
+      <section class="panel" id="panel-saved">
+        <div class="panel-head">
+          <div class="panel-head-row">
+            <h2><span class="step" aria-hidden="true">&#9733;</span>Saved searches</h2>
+            <button type="button" class="btn btn-ghost btn-small" id="saved-refresh">Refresh</button>
+          </div>
+          <p class="panel-meta">Each bookmark keeps the results as they were when you saved it.</p>
+        </div>
+        <div id="saved-list"></div>
+        <div id="saved-open"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Side column ============================================================= -->
+  <aside class="side">
+    <section class="glass account-card" id="account-card" hidden>
+      <span class="eyebrow">Signed in as</span>
+      <span class="account-email" id="user-email"></span>
+      <button type="button" class="btn btn-ghost btn-small" id="logout">Sign out</button>
+    </section>
+
+    <section class="glass sources">
+      <h2>Where results come from</h2>
+      <span class="eyebrow">Data</span>
+      <ul class="source-list">
+        <li class="source">
+          <span class="source-name">NCBI GEO / SRA</span>
+          <small>Live E-utilities query</small>
+          <span class="chip chip-open">open</span>
+        </li>
+        <li class="source">
+          <span class="source-name">GEO FTP</span>
+          <small>Download links, not re-hosted</small>
+          <span class="chip chip-open">open</span>
+        </li>
+      </ul>
+      <span class="eyebrow">Ranking</span>
+      <ul class="source-list">
+        <li class="source">
+          <span class="source-name">OpenAI</span>
+          <small>Query wording, then two ranking passes</small>
+          <span class="chip chip-key">api key</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="glass note-card">
+      <h3>Read the matches critically</h3>
+      <p>Ranking is AI-assisted and sees only each study's title and summary &mdash; never the
+        sample-level metadata. &ldquo;Requirement met&rdquo; means the study's own text mentions it.
+        Confirm the details on the GEO page before relying on a match.</p>
+    </section>
+  </aside>
+</div>
+
+<!-- Busy overlay ------------------------------------------------------------- -->
+<div id="busy" class="is-hidden" role="status" aria-live="polite">
+  <div class="busy-card">
+    <div class="spinner" aria-hidden="true"></div>
+    <p id="busy-text">Working&hellip;</p>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
