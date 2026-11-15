@@ -1,4 +1,4 @@
-"use strict";
+import { plural, safeUrl, describeDetail, friendlyMessage, linkLabel, parseQuery, summarizeStats } from "./logic.js";
 
 (() => {
   const API = (window.SEQ2FIND_API || "").replace(/\/+$/, "");
@@ -88,34 +88,10 @@
     return Number.isNaN(d.getTime()) ? "" : d.toLocaleString();
   }
 
-  // "1 match" / "3 matches": sibilant endings take -es.
-  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : /(s|x|z|ch|sh)$/.test(word) ? "es" : "s"}`;
-
-  // Only http(s) links are rendered. NCBI returns ftp:// URLs, which current browsers no longer
-  // open, but the same paths are served over https.
-  function safeUrl(u) {
-    if (typeof u !== "string") return null;
-    try {
-      const url = new URL(u.replace(/^ftp:\/\//i, "https://"));
-      return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
-    } catch { return null; }
-  }
-
   /* ---------- API ---------------------------------------------------------- */
 
   class ApiError extends Error {
     constructor(status, message) { super(message); this.status = status; }
-  }
-
-  function describeDetail(detail) {
-    if (typeof detail === "string") return detail;
-    if (Array.isArray(detail)) {
-      return detail.map((d) => {
-        const field = Array.isArray(d.loc) ? d.loc.filter((x) => x !== "body").join(".") : "";
-        return field ? `${field}: ${d.msg}` : d.msg;
-      }).join("; ");
-    }
-    return "";
   }
 
   async function api(path, { method = "GET", body, signal, auth = true } = {}) {
@@ -144,9 +120,7 @@
 
   function friendly(err) {
     if (err instanceof ApiError) {
-      if (err.status === 502) return "GEO or OpenAI could not be reached. Please try again in a moment.";
-      if (err.status === 422) return `Please check your input. ${err.message}`;
-      return err.message;
+      return friendlyMessage(err.status, err.message);
     }
     return "Something went wrong. Please try again.";
   }
@@ -212,16 +186,13 @@
   }
 
   function updateStats() {
-    const cur = state.current;
-    $("stat-results").textContent = cur ? String(cur.results.length) : "—";
+    const stats = summarizeStats(state.current, state.savedCount);
+    $("stat-results").textContent = stats.results;
 
-    const asked = Boolean(cur && cur.query.data_availability);
-    $("stat-requirement").classList.toggle("is-hidden", !asked);
-    $("requirement-empty").classList.toggle("is-hidden", asked);
-    if (asked) {
-      $("stat-requirement").textContent = String(cur.results.filter((r) => r.meets_data_availability).length);
-    }
-    $("stat-saved").textContent = String(state.savedCount);
+    $("stat-requirement").classList.toggle("is-hidden", !stats.asked);
+    $("requirement-empty").classList.toggle("is-hidden", stats.asked);
+    if (stats.asked) $("stat-requirement").textContent = stats.meetsRequirement;
+    $("stat-saved").textContent = stats.saved;
   }
 
   /* ---------- result rendering -------------------------------------------- */
@@ -231,8 +202,7 @@
     for (const raw of r.download_links || []) {
       const href = safeUrl(raw);
       if (!href) continue;
-      const label = /\/suppl\/?$/.test(href) ? "Supplementary files" : "Series files";
-      out.push(el("a", { href, target: "_blank", rel: "noopener noreferrer", text: label }));
+      out.push(el("a", { href, target: "_blank", rel: "noopener noreferrer", text: linkLabel(href) }));
     }
     return out;
   }
@@ -345,17 +315,14 @@
   /* ---------- search ------------------------------------------------------- */
 
   function readQuery() {
-    const val = (id) => $(id).value.trim();
-    const query = {
-      methodology: val("f-methodology"),
-      organism: val("f-organism"),
-      tissue: val("f-tissue"),
-      conditions: $("f-conditions").value.split("\n").map((s) => s.trim()).filter(Boolean),
-      max_results: parseInt($("f-max").value, 10) || 10,
-    };
-    const availability = val("f-availability");
-    if (availability) query.data_availability = availability;
-    return query;
+    return parseQuery({
+      methodology: $("f-methodology").value,
+      organism: $("f-organism").value,
+      tissue: $("f-tissue").value,
+      conditions: $("f-conditions").value,
+      max_results: $("f-max").value,
+      data_availability: $("f-availability").value,
+    });
   }
 
   function fillForm(q) {
