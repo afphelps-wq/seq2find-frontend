@@ -18,6 +18,8 @@ test("plural: sibilant endings take -es", () => {
   assert.equal(plural(3, "match"), "3 matches");
   assert.equal(plural(2, "box"), "2 boxes");
   assert.equal(plural(2, "bus"), "2 buses");
+  assert.equal(plural(2, "buzz"), "2 buzzes");
+  assert.equal(plural(2, "flash"), "2 flashes");
 });
 test("plural: sibilant word is still singular for one", () => {
   assert.equal(plural(1, "match"), "1 match");
@@ -64,6 +66,9 @@ test("describeDetail: multiple errors are joined with '; ' and nested locs with 
 });
 test("describeDetail: an error without loc uses just the message", () => {
   assert.equal(describeDetail([{ msg: "oops" }]), "oops");
+});
+test("describeDetail: a non-array loc is treated as no field instead of crashing", () => {
+  assert.equal(describeDetail([{ loc: "organism", msg: "bad" }]), "bad");
 });
 test("describeDetail: empty list, null and objects give an empty string", () => {
   assert.equal(describeDetail([]), "");
@@ -153,6 +158,10 @@ test("summarizeStats: counts only results that meet the requirement", () => {
 test("summarizeStats: a requirement with zero matches reports '0', not a dash", () => {
   const cur = { query: { data_availability: "x" }, results: [result(false)] };
   assert.equal(summarizeStats(cur, 0).meetsRequirement, "0");
+});
+test("summarizeStats: saved count is reported as a string for any value", () => {
+  assert.equal(summarizeStats(null, 12).saved, "12");
+  assert.equal(summarizeStats({ query: {}, results: [] }, 0).saved, "0");
 });
 test("summarizeStats: zero results is '0'", () => {
   assert.equal(summarizeStats({ query: {}, results: [] }, 0).results, "0");
