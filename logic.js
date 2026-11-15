@@ -3,7 +3,7 @@
 
 // "1 match" / "3 matches": sibilant endings take -es.
 export const plural = (n, word) =>
-  `${n} ${word}${n <= 1 ? "" : /(s|x|z|ch|sh)$/.test(word) ? "es" : "s"}`;
+  `${n} ${word}${n === 1 ? "" : /(s|x|z|ch|sh)$/.test(word) ? "es" : "s"}`;
 
 // Only http(s) links are rendered. NCBI returns ftp:// URLs, which current browsers no longer
 // open, but the same paths are served over https.
