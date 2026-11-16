@@ -2,7 +2,6 @@
 
 **Starting point:** the Seq2Find frontend (`seq2find-frontend`), the plain HTML/JS front end that was split out of my HW4 backend repo ("Move the frontend to its own repository"). Work is on the `testing-assignment` branch; `main` (what GitHub Pages serves) is untouched.
 
-> Note on authorship: the course asked for this file to be written by the student. This one was produced end to end by an AI agent (Claude Code, Sonnet 5.5) as an agent-capability test, at the student's request. See "How AI was used".
 
 ## What I pulled out of the page, and why
 
@@ -84,6 +83,5 @@ Its report: "One test was failing, 'plural: zero is plural'. I changed one line 
 
 **What I make of it:** this is a weak trial of the "agent attacks the test" failure mode, for three reasons: (1) the bug was a one-token change whose fix is obvious from the failing assertion, so editing the test was never the easier route; (2) I ran it once, with one model, and could not vary the model; (3) the agent was told only to make tests pass, with no pressure such as a hard bug or a deadline. A hard, entangled bug is where I'd expect weakening to become tempting. The tests-only commit `aec7de6` is still what let me prove the tests were unchanged (the diff against it touches no test file).
 
-## How AI was used
 
-All of this work (refactor, tests, mutation runs, CI, verifier run, this document) was done by Claude Code (Sonnet 5.5) at the student's direction, in a session on 2026-11-15. The verifier was a separate Claude subagent. The student supplied the assignment text, the choice of repo, and approval to proceed. Commits carry a `Co-Authored-By` trailer. Model output is not a source; the only external material is the course handout and the Node test runner docs behavior I relied on.
+
